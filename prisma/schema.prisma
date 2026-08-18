@@ -1,0 +1,31 @@
+// prisma/schema.prisma
+
+generator client {
+  provider        = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  
+}
+
+model User {
+  id                Int      @id @default(autoincrement())
+  username          String   @unique
+  passwordHash      String
+  role              String
+  avatarPreference  String?
+  status            String?
+  strength          String?
+  progress          Int?
+  createdAt         DateTime @default(now())
+}
+
+model Module {
+  id         Int      @id @default(autoincrement())
+  title      String
+  subject    String
+  gradeLevel Int
+  content    String
+  createdAt  DateTime @default(now())
+}
