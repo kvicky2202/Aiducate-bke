@@ -1,31 +1,144 @@
-// prisma/schema.prisma
-
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
-  
 }
 
 model User {
-  id                Int      @id @default(autoincrement())
-  username          String   @unique
-  passwordHash      String
-  role              String
-  avatarPreference  String?
-  status            String?
-  strength          String?
-  progress          Int?
-  createdAt         DateTime @default(now())
+  id               String   @id
+  username         String   @unique
+  passwordHash     String
+  name             String
+  role             String
+  teacherCardId    String?
+  avatarUrl        String?
+  initials         String?
+  email            String?
+  stars            Int      @default(0)
+  exp              Int      @default(0)
+  streak           Int      @default(0)
+  enrolledClassIds String   @default("[]")
+  createdClassIds  String   @default("[]")
+  equippedGear     String?
+  voiceId          String?
+  speechSpeed      Float?
+  avatarPreference String?
+  status           String?
+  strength         String?
+  progress         Int?
+  createdAt        DateTime @default(now())
 }
 
-model Module {
-  id         Int      @id @default(autoincrement())
+model Classroom {
+  id           String @id
+  code         String @unique
+  name         String
+  section      String
+  subject      String
+  teacherId    String
+  teacherName  String
+  studentCount Int    @default(0)
+  bannerColor  String
+  schedule     String
+  progress     Int    @default(0)
+}
+
+model ClassMaterial {
+  id         String @id
+  classId    String
   title      String
-  subject    String
-  gradeLevel Int
-  content    String
-  createdAt  DateTime @default(now())
+  uploadedAt String
+  summary    String
+}
+
+model Assignment {
+  id              String  @id
+  classId         String
+  materialId      String?
+  title           String
+  dueDate         String
+  totalPoints     Int
+  status          String
+  submissionCount Int     @default(0)
+  score           Int?
+}
+
+model AssignmentQuiz {
+  id           String @id
+  assignmentId String @unique
+  questions    String
+}
+
+model Quiz {
+  id            String @id
+  subject       String
+  title         String
+  questionCount Int
+  xpReward      Int
+  badgeColor    String
+}
+
+model QuizQuestionSet {
+  id        String @id
+  quizId    String @unique
+  questions String
+}
+
+model Story {
+  id           String @id
+  title        String
+  difficulty   String
+  starsReward  Int
+  content      String
+}
+
+model WardrobeItem {
+  id     String  @id
+  name   String
+  image  String  @default("")
+  locked Boolean @default(false)
+  lvl    Int?
+}
+
+model AiVoice {
+  id   String @id
+  name String
+  desc String
+}
+
+model CodeModule {
+  id          String  @id
+  title       String
+  description String
+  level       String
+  icon        String
+  lessons     Int
+  hours       Int
+  accentClass String
+  bgIconClass String
+  isWide      Boolean @default(false)
+  isNew       Boolean @default(false)
+}
+
+model DailyObjective {
+  id               String  @id @default("singleton")
+  completedQuizzes Int     @default(0)
+  targetQuizzes    Int     @default(2)
+  bonusUnlocked    Boolean @default(false)
+}
+
+model CodeLabProgress {
+  id                   String @id @default("singleton")
+  currentPath          String
+  description          String
+  completionPercentage Int
+  status               String
+}
+
+model GrowthJourney {
+  id         String @id @default("singleton")
+  weeklyGoal String
+  days       String
 }

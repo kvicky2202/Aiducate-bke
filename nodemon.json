@@ -1,0 +1,5 @@
+{
+  "watch": ["index.js", "controllers", "routes", "middleware", "config", "utils"],
+  "ignore": ["prisma", "node_modules"],
+  "ext": "js"
+}
