@@ -1,5 +1,4 @@
 import prisma from '../config/db.js';
-import { parseJson, toJson } from '../utils/json.js';
 import { shapeUser } from '../utils/serializers.js';
 
 export const listUsers = async (req, res) => {
@@ -34,7 +33,6 @@ export const patchUser = async (req, res) => {
       'equippedGear',
       'voiceId',
       'speechSpeed',
-      'enrolledClassIds',
       'exp',
       'stars',
       'streak',
@@ -44,11 +42,7 @@ export const patchUser = async (req, res) => {
     const data = {};
     for (const key of allowed) {
       if (req.body[key] === undefined) continue;
-      if (key === 'enrolledClassIds') {
-        data.enrolledClassIds = toJson(req.body.enrolledClassIds);
-      } else {
-        data[key] = req.body[key];
-      }
+      data[key] = req.body[key];
     }
 
     const user = await prisma.user.update({
@@ -62,28 +56,15 @@ export const patchUser = async (req, res) => {
   }
 };
 
-export const enrollUserInClass = async (req, res) => {
+export const deleteUser = async (req, res) => {
   try {
-    const { userId, classId } = req.body;
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!user) return res.status(404).json({ message: 'User not found.' });
 
-    const ids = parseJson(user.enrolledClassIds, []);
-    if (!ids.includes(classId)) {
-      ids.push(classId);
-      const updated = await prisma.user.update({
-        where: { id: userId },
-        data: { enrolledClassIds: toJson(ids) },
-      });
-      await prisma.classroom.update({
-        where: { id: classId },
-        data: { studentCount: { increment: 1 } },
-      });
-      return res.json(shapeUser(updated));
-    }
-    res.json(shapeUser(user));
+    await prisma.user.delete({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'User deleted.', id: req.params.id });
   } catch (error) {
-    console.error('enrollUserInClass', error);
-    res.status(500).json({ message: 'Failed to enroll user.' });
+    console.error('deleteUser', error);
+    res.status(500).json({ message: 'Failed to delete user.' });
   }
 };

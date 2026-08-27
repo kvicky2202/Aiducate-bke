@@ -32,6 +32,42 @@ export function shapeAssignmentQuiz(row) {
   };
 }
 
+export function shapeAssignmentResult(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    assignmentId: row.assignmentId,
+    studentId: row.studentId,
+    studentName: row.studentName || undefined,
+    score: row.score,
+    totalPoints: row.totalPoints,
+    answers: parseJson(row.answers, []),
+    status: row.status,
+    submittedAt: row.submittedAt,
+  };
+}
+
+export function shapeClassMaterial(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    classId: row.classId,
+    title: row.title,
+    uploadedAt: row.uploadedAt,
+    summary: row.summary || '',
+    fileName: row.fileName || undefined,
+    mimeType: row.mimeType || undefined,
+    uploadedById: row.uploadedById || undefined,
+    fileUrl: row.filePath ? `/uploads/materials/${pathBasename(row.filePath)}` : undefined,
+  };
+}
+
+function pathBasename(filePath) {
+  if (!filePath) return undefined;
+  const parts = String(filePath).split(/[/\\]/);
+  return parts[parts.length - 1];
+}
+
 export function shapeQuizQuestionSet(row) {
   if (!row) return null;
   return {

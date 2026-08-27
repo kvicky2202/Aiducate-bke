@@ -1,5 +1,9 @@
 import prisma from '../config/db.js';
-import { shapeAssignmentQuiz } from '../utils/serializers.js';
+import { toJson } from '../utils/json.js';
+import {
+  shapeAssignmentQuiz,
+  shapeAssignmentResult,
+} from '../utils/serializers.js';
 
 export const listAssignments = async (req, res) => {
   try {
@@ -53,5 +57,102 @@ export const listAssignmentQuizzes = async (req, res) => {
   } catch (error) {
     console.error('listAssignmentQuizzes', error);
     res.status(500).json({ message: 'Failed to load assignment quizzes.' });
+  }
+};
+
+/** Student submits their assignment result. */
+export const postAssignmentResult = async (req, res) => {
+  try {
+    const { assignmentId, studentId, score, answers, status } = req.body || {};
+
+    if (!assignmentId || !studentId || score === undefined) {
+      return res.status(400).json({
+        message: 'assignmentId, studentId, and score are required.',
+      });
+    }
+
+    const [assignment, student] = await Promise.all([
+      prisma.assignment.findUnique({ where: { id: assignmentId } }),
+      prisma.user.findUnique({ where: { id: studentId } }),
+    ]);
+
+    if (!assignment) return res.status(404).json({ message: 'Assignment not found.' });
+    if (!student) return res.status(404).json({ message: 'Student not found.' });
+    if (student.role !== 'student') {
+      return res.status(403).json({ message: 'Only students can submit assignment results.' });
+    }
+
+    const existing = await prisma.assignmentResult.findUnique({
+      where: {
+        assignmentId_studentId: { assignmentId, studentId },
+      },
+    });
+
+    const payload = {
+      studentName: student.name,
+      score: Number(score),
+      totalPoints: assignment.totalPoints,
+      answers: toJson(answers || []),
+      status: status || 'submitted',
+    };
+
+    let result;
+    if (existing) {
+      result = await prisma.assignmentResult.update({
+        where: { id: existing.id },
+        data: payload,
+      });
+    } else {
+      result = await prisma.assignmentResult.create({
+        data: {
+          id: `ares-${Date.now()}`,
+          assignmentId,
+          studentId,
+          ...payload,
+        },
+      });
+      await prisma.assignment.update({
+        where: { id: assignmentId },
+        data: { submissionCount: { increment: 1 } },
+      });
+    }
+
+    res.status(existing ? 200 : 201).json(shapeAssignmentResult(result));
+  } catch (error) {
+    console.error('postAssignmentResult', error);
+    res.status(500).json({ message: 'Failed to submit assignment result.' });
+  }
+};
+
+/**
+ * Teacher (or student viewing own) lists assignment results.
+ * Filters: assignmentId, classId, studentId
+ */
+export const listAssignmentResults = async (req, res) => {
+  try {
+    const { assignmentId, classId, studentId } = req.query;
+    const where = {};
+
+    if (assignmentId) {
+      where.assignmentId = String(assignmentId);
+    } else if (classId) {
+      const assignments = await prisma.assignment.findMany({
+        where: { classId: String(classId) },
+        select: { id: true },
+      });
+      where.assignmentId = { in: assignments.map((a) => a.id) };
+    }
+
+    if (studentId) where.studentId = String(studentId);
+
+    const results = await prisma.assignmentResult.findMany({
+      where,
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    res.json(results.map(shapeAssignmentResult));
+  } catch (error) {
+    console.error('listAssignmentResults', error);
+    res.status(500).json({ message: 'Failed to load assignment results.' });
   }
 };

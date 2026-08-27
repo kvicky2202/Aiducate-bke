@@ -46,11 +46,15 @@ model Classroom {
 }
 
 model ClassMaterial {
-  id         String @id
-  classId    String
-  title      String
-  uploadedAt String
-  summary    String
+  id           String  @id
+  classId      String
+  title        String
+  uploadedAt   String
+  summary      String  @default("")
+  fileName     String?
+  filePath     String?
+  mimeType     String?
+  uploadedById String?
 }
 
 model Assignment {
@@ -63,6 +67,20 @@ model Assignment {
   status          String
   submissionCount Int     @default(0)
   score           Int?
+}
+
+model AssignmentResult {
+  id           String   @id
+  assignmentId String
+  studentId    String
+  studentName  String?
+  score        Int
+  totalPoints  Int
+  answers      String   @default("[]")
+  status       String   @default("submitted")
+  submittedAt  DateTime @default(now())
+
+  @@unique([assignmentId, studentId])
 }
 
 model AssignmentQuiz {
@@ -123,7 +141,8 @@ model CodeModule {
 }
 
 model DailyObjective {
-  id               String  @id @default("singleton")
+  /// One row per user — id matches User.id
+  id               String  @id
   completedQuizzes Int     @default(0)
   targetQuizzes    Int     @default(2)
   bonusUnlocked    Boolean @default(false)

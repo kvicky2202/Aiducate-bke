@@ -1,11 +1,26 @@
 import express from 'express';
-import { listUsers, getUserById, patchUser, enrollUserInClass } from '../controllers/usersController.js';
-import { listClasses, getClassById, listClassMaterials } from '../controllers/classesController.js';
+import {
+  listUsers,
+  getUserById,
+  patchUser,
+  deleteUser,
+} from '../controllers/usersController.js';
+import {
+  listClasses,
+  getClassById,
+  createClass,
+  joinClassByCode,
+  leaveClass,
+  listClassMaterials,
+  createClassMaterial,
+} from '../controllers/classesController.js';
 import {
   listAssignments,
   getAssignmentById,
   patchAssignment,
   listAssignmentQuizzes,
+  postAssignmentResult,
+  listAssignmentResults,
 } from '../controllers/assignmentsController.js';
 import {
   listQuizzes,
@@ -24,22 +39,35 @@ import {
   getAiVoices,
 } from '../controllers/catalogController.js';
 import { generateQuizForSubject, askEducatorAssistant } from '../controllers/aiController.js';
+import { uploadMaterialPdf } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
 router.get('/users', listUsers);
 router.get('/users/:id', getUserById);
 router.patch('/users/:id', patchUser);
-router.post('/enrollments', enrollUserInClass);
+router.delete('/users/:id', deleteUser);
 
 router.get('/classes', listClasses);
+router.post('/classes', createClass);
+router.post('/classes/join', joinClassByCode);
+router.post('/classes/leave', leaveClass);
 router.get('/classes/:id', getClassById);
+
 router.get('/classMaterials', listClassMaterials);
+router.post('/classMaterials', (req, res, next) => {
+  uploadMaterialPdf(req, res, (err) => {
+    if (err) return res.status(400).json({ message: err.message });
+    return createClassMaterial(req, res, next);
+  });
+});
 
 router.get('/assignments', listAssignments);
 router.get('/assignments/:id', getAssignmentById);
 router.patch('/assignments/:id', patchAssignment);
 router.get('/assignmentQuizzes', listAssignmentQuizzes);
+router.get('/assignmentResults', listAssignmentResults);
+router.post('/assignmentResults', postAssignmentResult);
 
 router.get('/quizzes', listQuizzes);
 router.get('/quizzes/:id', getQuizById);

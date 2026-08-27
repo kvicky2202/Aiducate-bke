@@ -392,11 +392,22 @@ async function main() {
   }
 
   await prisma.dailyObjective.upsert({
-    where: { id: 'singleton' },
+    where: { id: 'usr-student-1' },
     update: {},
     create: {
-      id: 'singleton',
-      completedQuizzes: 5,
+      id: 'usr-student-1',
+      completedQuizzes: 1,
+      targetQuizzes: 2,
+      bonusUnlocked: false,
+    },
+  });
+
+  await prisma.dailyObjective.upsert({
+    where: { id: 'usr-teacher-1' },
+    update: {},
+    create: {
+      id: 'usr-teacher-1',
+      completedQuizzes: 0,
       targetQuizzes: 2,
       bonusUnlocked: false,
     },

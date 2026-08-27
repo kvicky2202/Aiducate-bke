@@ -59,12 +59,43 @@ export const listStories = async (req, res) => {
   }
 };
 
-export const getDailyObjective = async (_req, res) => {
+const DEFAULT_TARGET_QUIZZES = 2;
+
+async function getOrCreateDailyObjective(userId) {
+  const existing = await prisma.dailyObjective.findUnique({ where: { id: userId } });
+  if (existing) return existing;
+  return prisma.dailyObjective.create({
+    data: {
+      id: userId,
+      completedQuizzes: 0,
+      targetQuizzes: DEFAULT_TARGET_QUIZZES,
+      bonusUnlocked: false,
+    },
+  });
+}
+
+function shapeDailyObjective(row) {
+  if (!row) return null;
+  return {
+    userId: row.id,
+    completedQuizzes: row.completedQuizzes,
+    targetQuizzes: row.targetQuizzes,
+    bonusUnlocked: row.bonusUnlocked,
+  };
+}
+
+export const getDailyObjective = async (req, res) => {
   try {
-    const row = await prisma.dailyObjective.findUnique({ where: { id: 'singleton' } });
-    if (!row) return res.status(404).json({ message: 'Daily objective not found.' });
-    const { id, ...rest } = row;
-    res.json(rest);
+    const userId = req.query.userId ? String(req.query.userId) : null;
+    if (!userId) {
+      return res.status(400).json({ message: 'userId query param is required.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+
+    const row = await getOrCreateDailyObjective(userId);
+    res.json(shapeDailyObjective(row));
   } catch (error) {
     console.error('getDailyObjective', error);
     res.status(500).json({ message: 'Failed to load daily objective.' });
@@ -73,17 +104,29 @@ export const getDailyObjective = async (_req, res) => {
 
 export const patchDailyObjective = async (req, res) => {
   try {
+    const userId = req.query.userId
+      ? String(req.query.userId)
+      : req.body?.userId
+        ? String(req.body.userId)
+        : null;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'userId is required.' });
+    }
+
+    await getOrCreateDailyObjective(userId);
+
     const allowed = ['completedQuizzes', 'targetQuizzes', 'bonusUnlocked'];
     const data = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) data[key] = req.body[key];
     }
+
     const row = await prisma.dailyObjective.update({
-      where: { id: 'singleton' },
+      where: { id: userId },
       data,
     });
-    const { id, ...rest } = row;
-    res.json(rest);
+    res.json(shapeDailyObjective(row));
   } catch (error) {
     console.error('patchDailyObjective', error);
     res.status(500).json({ message: 'Failed to update daily objective.' });
@@ -92,9 +135,15 @@ export const patchDailyObjective = async (req, res) => {
 
 export const recordQuizCompletion = async (req, res) => {
   try {
-    const { userId, xpEarned } = req.body;
+    const { userId, xpEarned } = req.body || {};
+    if (!userId) {
+      return res.status(400).json({ message: 'userId is required.' });
+    }
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ message: 'User not found.' });
+
+    await getOrCreateDailyObjective(userId);
 
     const [updatedUser, objective] = await prisma.$transaction([
       prisma.user.update({
@@ -102,14 +151,27 @@ export const recordQuizCompletion = async (req, res) => {
         data: { exp: (user.exp || 0) + Number(xpEarned || 0) },
       }),
       prisma.dailyObjective.update({
-        where: { id: 'singleton' },
+        where: { id: userId },
         data: { completedQuizzes: { increment: 1 } },
       }),
     ]);
 
+    const bonusUnlocked =
+      objective.completedQuizzes >= objective.targetQuizzes
+        ? true
+        : objective.bonusUnlocked;
+
+    let finalObjective = objective;
+    if (bonusUnlocked && !objective.bonusUnlocked) {
+      finalObjective = await prisma.dailyObjective.update({
+        where: { id: userId },
+        data: { bonusUnlocked: true },
+      });
+    }
+
     res.json({
       exp: updatedUser.exp,
-      completedQuizzes: objective.completedQuizzes,
+      ...shapeDailyObjective(finalObjective),
     });
   } catch (error) {
     console.error('recordQuizCompletion', error);
