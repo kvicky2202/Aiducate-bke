@@ -33,8 +33,14 @@ import {
 } from '../controllers/quizzesController.js';
 import {
   getCodeLabProgress,
-  getCodeModules,
+  patchCodeLabProgress,
+  getModuleProgress,
   getGrowthJourney,
+  getCodeModules,
+  getCodeModuleById,
+  executeCode,
+} from '../controllers/codeLabController.js';
+import {
   getWardrobeItems,
   getAiVoices,
 } from '../controllers/catalogController.js';
@@ -78,8 +84,12 @@ router.patch('/dailyObjective', patchDailyObjective);
 router.post('/quizCompletions', recordQuizCompletion);
 
 router.get('/codeLabProgress', getCodeLabProgress);
+router.patch('/codeLabProgress', patchCodeLabProgress);
+router.get('/codeLabModuleProgress', getModuleProgress);
 router.get('/codeModules', getCodeModules);
+router.get('/codeModules/:moduleId', getCodeModuleById);
 router.get('/growthJourney', getGrowthJourney);
+router.post('/code/execute', executeCode);
 router.get('/wardrobeItems', getWardrobeItems);
 router.get('/aiVoices', getAiVoices);
 

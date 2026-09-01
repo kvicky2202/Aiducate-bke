@@ -138,14 +138,33 @@ model CodeModule {
   bgIconClass String
   isWide      Boolean @default(false)
   isNew       Boolean @default(false)
+  comingSoon  Boolean @default(false)
+  category    String  @default("")
+}
+
+/// Full syllabus JSON for a module (lessons, quizzes, chapters)
+model CodeModuleCurriculum {
+  moduleId    String @id
+  sourceUrl   String
+  sourceLabel String
+  curriculum  String
 }
 
 model DailyObjective {
-  /// One row per user — id matches User.id
   id               String  @id
   completedQuizzes Int     @default(0)
   targetQuizzes    Int     @default(2)
   bonusUnlocked    Boolean @default(false)
+}
+
+/// Per-user Code Lab hub progress, lesson states, and growth chart data
+model UserCodeLabProgress {
+  userId         String   @id
+  activeModuleId String   @default("python-fundamentals")
+  itemProgress   String   @default("{}")
+  weeklyGoal     String   @default("0h / 5h")
+  growthDays     String   @default("[]")
+  updatedAt      DateTime @updatedAt
 }
 
 model CodeLabProgress {

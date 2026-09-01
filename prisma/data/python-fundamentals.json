@@ -1,0 +1,286 @@
+{
+  "id": "python-fundamentals",
+  "title": "Python Fundamentals",
+  "category": "Python",
+  "description": "Master the basics of Python — variables, data types, and control flow. Lessons use excerpts from the official Python Software Foundation tutorial, presented in our Code Lab UI.",
+  "level": "Beginner",
+  "icon": "code",
+  "accentClass": "text-[#d5bbff]",
+  "bgIconClass": "bg-[#8b44f7]/20 text-[#d5bbff]",
+  "totalDuration": "2h 45m",
+  "totalXp": 450,
+  "lessonsCount": 6,
+  "hours": 3,
+  "prerequisites": [
+    "No prior coding experience required",
+    "Basic familiarity with computers and code editors"
+  ],
+  "referenceDocs": [
+    {
+      "title": "Official Python Tutorial (PSF)",
+      "size": "Web",
+      "url": "https://docs.python.org/3/tutorial/index.html"
+    },
+    {
+      "title": "Python 3 — Using Python as a Calculator",
+      "size": "Web",
+      "url": "https://docs.python.org/3/tutorial/introduction.html#using-python-as-a-calculator"
+    }
+  ],
+  "chapters": [
+    {
+      "id": "ch-1",
+      "title": "Chapter 1: Variables & Data Types",
+      "description": "PSF Tutorial §3 — An Informal Introduction to Python",
+      "lessons": [
+        {
+          "id": "var-101",
+          "title": "Introduction to Variables & Assignment",
+          "duration": "12 mins",
+          "xp": 50,
+          "type": "interactive",
+          "status": "locked",
+          "stepNumber": 1,
+          "totalSteps": 6,
+          "docUrl": "https://docs.python.org/3/tutorial/introduction.html#using-python-as-a-calculator",
+          "docSection": "§3.1 Using Python as a Calculator — Assignment",
+          "intro": [
+            "Read the official tutorial section below, then complete the practice objectives in the editor."
+          ],
+          "sections": [
+            {
+              "heading": "Using Python as a Calculator",
+              "paragraphs": [
+                "Let's try some simple Python commands. The interpreter acts as a simple calculator: you can type an expression into it and it will write the value. Expression syntax is straightforward: the operators `+`, `-`, `*` and `/` can be used to perform arithmetic; parentheses `()` can be used for grouping."
+              ],
+              "code": "2 + 2\n50 - 5*6\n(50 - 5*6) / 4\n8 / 5  # division always returns a float",
+              "codeOutput": "4\n20\n5.0\n1.6"
+            },
+            {
+              "heading": "Assignment with =",
+              "paragraphs": [
+                "The equal sign (`=`) is used to assign a value to a variable. Afterwards, no result is displayed before the next interactive prompt:",
+                "If a variable is not \"defined\" (assigned a value), trying to use it will give you an error — a `NameError`."
+              ],
+              "code": "width = 20\nheight = 5 * 9\nwidth * height",
+              "codeOutput": "900"
+            },
+            {
+              "heading": "Variable names",
+              "paragraphs": [
+                "Names can be letters, digits, and underscores. A name cannot start with a digit. Assignment creates a reference from the name to the value — think of a variable as a label for a value in memory."
+              ]
+            }
+          ],
+          "exampleCode": "width = 20\nheight = 5 * 9\nprint(width * height)",
+          "tasks": [
+            { "id": 1, "text": "Declare a variable named", "codeSnippet": "energy" },
+            { "id": 2, "text": "Assign it the value", "codeSnippet": "100" },
+            { "id": 3, "text": "Use print() to show your variable (like the tutorial).", "codeSnippet": "" }
+          ],
+          "starterCode": "# Practice assignment — follow the tutorial examples above\n\n",
+          "successMessage": "You assigned a value and printed it — just like the official tutorial."
+        },
+        {
+          "id": "var-102",
+          "title": "Numbers, Strings & Booleans",
+          "duration": "18 mins",
+          "xp": 50,
+          "type": "interactive",
+          "status": "locked",
+          "stepNumber": 2,
+          "totalSteps": 6,
+          "docUrl": "https://docs.python.org/3/tutorial/introduction.html#numbers",
+          "docSection": "§3.1.1 Numbers & §3.1.2 Text",
+          "intro": [
+            "The official tutorial introduces numeric types and text (strings). Read each subsection, try the examples, then build your own program."
+          ],
+          "sections": [
+            {
+              "heading": "Numbers (int and float)",
+              "paragraphs": [
+                "The integer numbers (e.g. `2`, `4`, `20`) have type **int**, the ones with a fractional part (e.g. `5.0`, `1.6`) have type **float**.",
+                "Division (`/`) always returns a float. To do floor division and get an integer result you can use the `//` operator; to calculate the remainder you can use `%`:"
+              ],
+              "code": "17 / 3\n17 // 3\n17 % 3\n5 ** 2",
+              "codeOutput": "5.666666666666667\n5\n2\n25"
+            },
+            {
+              "heading": "Text (strings)",
+              "paragraphs": [
+                "Python can manipulate text (type **str**, \"strings\") as well as numbers. They can be enclosed in single quotes (`'...'`) or double quotes (`\"...\"`) with the same result.",
+                "The `print()` function produces readable output — it omits the enclosing quotes and interprets escape characters like `\\n` for newline:"
+              ],
+              "code": "'spam eggs'\n\"Paris rabbit got your back :)! Yay!\"\nprint('First line.\\nSecond line.')",
+              "codeOutput": "spam eggs\nParis rabbit got your back :)! Yay!\nFirst line.\nSecond line."
+            },
+            {
+              "heading": "Booleans in practice",
+              "paragraphs": [
+                "Python has built-in boolean values `True` and `False` (always capitalized). You will use them soon with `if` statements. For now, know that comparisons like `5 > 3` produce a boolean."
+              ],
+              "code": "age = 14\nis_teen = age >= 13\nprint(is_teen)",
+              "codeOutput": "True"
+            }
+          ],
+          "exampleCode": "age = 14\nheight = 1.62\nname = \"Chifundo\"\nis_student = True\nprint(age, name, is_student)",
+          "tasks": [
+            { "id": 1, "text": "Create an integer variable", "codeSnippet": "score" },
+            { "id": 2, "text": "Create a string variable", "codeSnippet": "team" },
+            { "id": 3, "text": "Create a boolean variable", "codeSnippet": "passed" },
+            { "id": 4, "text": "Print all three on separate lines.", "codeSnippet": "" }
+          ],
+          "starterCode": "# Numbers, strings, and booleans\n\n",
+          "successMessage": "Great work! You used the core data types from the official tutorial."
+        },
+        {
+          "id": "quiz-1",
+          "title": "Knowledge Check: Variable Scope & Types",
+          "duration": "10 mins",
+          "xp": 100,
+          "type": "quiz",
+          "status": "locked",
+          "questions": [
+            {
+              "id": "q1",
+              "prompt": "Which symbol assigns a value in Python?",
+              "options": ["==", "=", ":=", "->"],
+              "correctIndex": 1,
+              "explanation": "A single equals sign `=` assigns. `==` compares equality (PSF tutorial §4.2)."
+            },
+            {
+              "id": "q2",
+              "prompt": "What data type is 3.14?",
+              "options": ["int", "str", "float", "bool"],
+              "correctIndex": 2,
+              "explanation": "Decimal numbers are floats in Python."
+            },
+            {
+              "id": "q3",
+              "prompt": "Which is a valid variable name?",
+              "options": ["2score", "my-score", "player_score", "class"],
+              "correctIndex": 2,
+              "explanation": "Names may use letters, digits, underscores; they cannot start with a digit."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch-2",
+      "title": "Chapter 2: Control Flow & Logic",
+      "description": "PSF Tutorial §4 — More Control Flow Tools",
+      "lessons": [
+        {
+          "id": "ctrl-101",
+          "title": "Comparisons and Boolean Logic",
+          "duration": "15 mins",
+          "xp": 50,
+          "type": "interactive",
+          "status": "locked",
+          "stepNumber": 4,
+          "totalSteps": 6,
+          "docUrl": "https://docs.python.org/3/tutorial/introduction.html#first-steps-towards-programming",
+          "docSection": "§3.2 First Steps — comparisons & while loops",
+          "intro": [
+            "Before `if` statements, the tutorial shows how Python evaluates conditions using comparison operators — the same operators used in real programs."
+          ],
+          "sections": [
+            {
+              "heading": "Comparison operators",
+              "paragraphs": [
+                "The standard comparison operators are written the same as in C: `<` (less than), `>` (greater than), `==` (equal to), `<=`, `>=`, and `!=` (not equal to).",
+                "In Python, zero is false; any non-zero integer value is true. The condition in a loop or `if` can also be a string or list — anything with a non-zero length is true, empty sequences are false."
+              ],
+              "code": "5 < 3\n5 >= 5\n'hello' == 'hello'\n'hello' != 'world'",
+              "codeOutput": "False\nTrue\nTrue\nTrue"
+            },
+            {
+              "heading": "Combining conditions",
+              "paragraphs": [
+                "Use `and` when both conditions must be true, and `or` when either condition is enough. This is how you model real rules in code."
+              ],
+              "code": "has_ticket = True\nage = 16\ncan_enter = has_ticket and age >= 13\nprint(can_enter)",
+              "codeOutput": "True"
+            }
+          ],
+          "exampleCode": "has_ticket = True\nage = 16\ncan_enter = has_ticket and age >= 13\nprint(can_enter)",
+          "tasks": [
+            { "id": 1, "text": "Create a boolean", "codeSnippet": "is_raining" },
+            { "id": 2, "text": "Compare two numbers with", "codeSnippet": ">=" },
+            { "id": 3, "text": "Print the result of your comparison.", "codeSnippet": "" }
+          ],
+          "starterCode": "# Comparison and logic\n\n",
+          "successMessage": "Your program can evaluate conditions — ready for if statements!"
+        },
+        {
+          "id": "ctrl-102",
+          "title": "If, Elif, and Else Statements",
+          "duration": "20 mins",
+          "xp": 75,
+          "type": "interactive",
+          "status": "locked",
+          "stepNumber": 5,
+          "totalSteps": 6,
+          "docUrl": "https://docs.python.org/3/tutorial/controlflow.html#if-statements",
+          "docSection": "§4.1 if Statements",
+          "intro": [
+            "Perhaps the most well-known statement type is the **if** statement. Read the official example, then write your own branching program."
+          ],
+          "sections": [
+            {
+              "heading": "if … elif … else",
+              "paragraphs": [
+                "There can be zero or more **elif** parts, and the **else** part is optional. The keyword `elif` is short for \"else if\", and is useful to avoid excessive indentation.",
+                "The body of each branch is **indented** — indentation is Python's way of grouping statements. Use four spaces per level (the style shown throughout the tutorial)."
+              ],
+              "code": "x = 42\nif x < 0:\n    print('Negative')\nelif x == 0:\n    print('Zero')\nelif x == 1:\n    print('Single')\nelse:\n    print('More')",
+              "codeOutput": "More"
+            },
+            {
+              "heading": "Indentation matters",
+              "paragraphs": [
+                "Every line inside an `if`, `elif`, or `else` block must be indented by the same amount. If you forget indentation, Python raises an `IndentationError`.",
+                "Try changing the value of `score` in the editor example to see different branches run."
+              ],
+              "code": "score = 85\nif score >= 90:\n    print('A grade')\nelif score >= 80:\n    print('B grade')\nelse:\n    print('Keep practicing')",
+              "codeOutput": "B grade"
+            }
+          ],
+          "exampleCode": "score = 85\nif score >= 90:\n    print('A grade')\nelif score >= 80:\n    print('B grade')\nelse:\n    print('Keep practicing')",
+          "tasks": [
+            { "id": 1, "text": "Create a variable", "codeSnippet": "temperature" },
+            { "id": 2, "text": "Write if/else that prints Hot or Cool", "codeSnippet": "" },
+            { "id": 3, "text": "Use a threshold of 30 degrees.", "codeSnippet": "" }
+          ],
+          "starterCode": "# if / elif / else — indentation is required!\n\n",
+          "successMessage": "Your code branches like the official tutorial examples!"
+        },
+        {
+          "id": "quiz-2",
+          "title": "Chapter 2 Review Quiz",
+          "duration": "15 mins",
+          "xp": 125,
+          "type": "quiz",
+          "status": "locked",
+          "questions": [
+            {
+              "id": "q1",
+              "prompt": "What values can a boolean hold?",
+              "options": ["0 or 1", "True or False", "yes or no", "on or off"],
+              "correctIndex": 1,
+              "explanation": "Python booleans are `True` and `False`."
+            },
+            {
+              "id": "q2",
+              "prompt": "Which keyword adds another condition after if?",
+              "options": ["elseif", "elif", "else if", "then"],
+              "correctIndex": 1,
+              "explanation": "Python uses `elif` (PSF tutorial §4.1)."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

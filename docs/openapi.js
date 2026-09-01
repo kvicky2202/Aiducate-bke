@@ -571,22 +571,100 @@ export const openApiSpec = {
     '/codeLabProgress': {
       get: {
         tags: ['Catalog'],
-        summary: 'Code lab progress',
-        responses: { 200: { description: 'Progress object' } },
+        summary: 'Per-user code lab hub progress',
+        parameters: [
+          { name: 'userId', in: 'query', required: true, schema: { type: 'string' }, example: 'usr-student-1' },
+        ],
+        responses: { 200: { description: 'Hub progress with itemProgress map' } },
+      },
+      patch: {
+        tags: ['Catalog'],
+        summary: 'Save lesson/quiz completion for a user',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['userId'],
+                properties: {
+                  userId: { type: 'string' },
+                  moduleId: { type: 'string', example: 'python-fundamentals' },
+                  itemId: { type: 'string', example: 'var-101' },
+                  status: { type: 'string', example: 'completed' },
+                  activeModuleId: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Updated hub progress' } },
+      },
+    },
+    '/codeLabModuleProgress': {
+      get: {
+        tags: ['Catalog'],
+        summary: 'Per-user progress for one module',
+        parameters: [
+          { name: 'userId', in: 'query', required: true, schema: { type: 'string' } },
+          { name: 'moduleId', in: 'query', required: true, schema: { type: 'string' } },
+        ],
+        responses: { 200: { description: 'Module percent and itemProgress' } },
+      },
+    },
+    '/code/execute': {
+      post: {
+        tags: ['Catalog'],
+        summary: 'Run Python code in the lab terminal',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['code'],
+                properties: {
+                  code: { type: 'string', example: 'print("Hello from AIDucate")' },
+                  language: { type: 'string', example: 'python' },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'stdout, stderr, success, exitCode' } },
       },
     },
     '/codeModules': {
       get: {
         tags: ['Catalog'],
-        summary: 'Code modules',
+        summary: 'Code modules catalog (with official content flags)',
         responses: { 200: { description: 'Array of modules' } },
+      },
+    },
+    '/codeModules/{moduleId}': {
+      get: {
+        tags: ['Catalog'],
+        summary: 'Full module curriculum (Python = official PSF-aligned content)',
+        parameters: [
+          {
+            name: 'moduleId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            example: 'python-fundamentals',
+          },
+        ],
+        responses: { 200: { description: 'sourceUrl, sourceLabel, module with chapters' } },
       },
     },
     '/growthJourney': {
       get: {
         tags: ['Catalog'],
-        summary: 'Growth journey chart data',
-        responses: { 200: { description: 'Growth journey object' } },
+        summary: 'Per-user growth journey chart',
+        parameters: [
+          { name: 'userId', in: 'query', required: true, schema: { type: 'string' } },
+        ],
+        responses: { 200: { description: 'weeklyGoal and days' } },
       },
     },
     '/wardrobeItems': {

@@ -1,6 +1,11 @@
 import pkg from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import bcrypt from 'bcryptjs';
+import { readFileSync } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const { PrismaClient } = pkg;
 const adapter = new PrismaBetterSqlite3({ url: 'file:./prisma/dev.db' });
@@ -428,7 +433,23 @@ async function main() {
 
   const codeModules = [
     {
-      id: 'mod-1',
+      id: 'python-fundamentals',
+      title: 'Python Fundamentals',
+      description:
+        "Master the basics of the world's most popular language. From variables to loops, your coding journey starts here.",
+      level: 'Beginner',
+      icon: 'code',
+      lessons: 6,
+      hours: 3,
+      accentClass: 'text-[#d5bbff]',
+      bgIconClass: 'bg-[#8b44f7]/20 text-[#d5bbff]',
+      isWide: false,
+      isNew: false,
+      comingSoon: false,
+      category: 'Python',
+    },
+    {
+      id: 'web-html-css',
       title: 'Web Magic with HTML/CSS',
       description: 'Learn to build beautiful websites from scratch. Style your ideas with modern CSS techniques.',
       level: 'Beginner',
@@ -439,9 +460,11 @@ async function main() {
       bgIconClass: 'bg-[#00f4fe]/20 text-[#00dce5]',
       isWide: false,
       isNew: false,
+      comingSoon: true,
+      category: 'Web Development',
     },
     {
-      id: 'mod-2',
+      id: 'sql-data',
       title: 'Data Detective with SQL',
       description: 'Uncover hidden stories in data. Master the language of databases and data visualization.',
       level: 'Intermediate',
@@ -452,20 +475,24 @@ async function main() {
       bgIconClass: 'bg-[#8b44f7]/20 text-[#d5bbff]',
       isWide: false,
       isNew: false,
+      comingSoon: true,
+      category: 'Databases',
     },
     {
-      id: 'mod-3',
+      id: 'ai-explorer',
       title: 'AI Explorer',
       description:
         'Dive into the world of Artificial Intelligence. Build your first neural network and understand the future of tech.',
       level: 'Advanced',
       icon: 'psychology',
-      lessons: 15,
+      lessons: 10,
       hours: 10,
       accentClass: 'text-[#ffaced]',
       bgIconClass: 'bg-[#ca00be]/20 text-[#ffaced]',
       isWide: true,
       isNew: true,
+      comingSoon: true,
+      category: 'Artificial Intelligence',
     },
   ];
 
@@ -476,6 +503,61 @@ async function main() {
       create: row,
     });
   }
+
+  const pythonCurriculum = readFileSync(
+    path.join(__dirname, 'data', 'python-fundamentals.json'),
+    'utf8'
+  );
+  await prisma.codeModuleCurriculum.upsert({
+    where: { moduleId: 'python-fundamentals' },
+    update: { curriculum: pythonCurriculum },
+    create: {
+      moduleId: 'python-fundamentals',
+      sourceUrl: 'https://docs.python.org/3/tutorial/index.html',
+      sourceLabel: 'Python Software Foundation — Official Tutorial',
+      curriculum: pythonCurriculum,
+    },
+  });
+
+  const defaultGrowthDays = JSON.stringify([
+    { label: 'Mon', height: '0%', current: false },
+    { label: 'Tue', height: '0%', current: false },
+    { label: 'Wed', height: '0%', current: false },
+    { label: 'Thu', height: '0%', current: false },
+    { label: 'Fri', height: '0%', current: false },
+  ]);
+
+  await prisma.userCodeLabProgress.upsert({
+    where: { userId: 'usr-student-1' },
+    update: {},
+    create: {
+      userId: 'usr-student-1',
+      activeModuleId: 'python-fundamentals',
+      itemProgress: JSON.stringify({
+        'python-fundamentals:var-101': 'completed',
+      }),
+      weeklyGoal: '1h 15m / 5h',
+      growthDays: JSON.stringify([
+        { label: 'Mon', height: '30%', current: false },
+        { label: 'Tue', height: '15%', current: false },
+        { label: 'Wed', height: '45%', current: true },
+        { label: 'Thu', height: '0%', current: false },
+        { label: 'Fri', height: '0%', current: false },
+      ]),
+    },
+  });
+
+  await prisma.userCodeLabProgress.upsert({
+    where: { userId: 'usr-teacher-1' },
+    update: {},
+    create: {
+      userId: 'usr-teacher-1',
+      activeModuleId: '',
+      itemProgress: '{}',
+      weeklyGoal: '0h / 5h',
+      growthDays: defaultGrowthDays,
+    },
+  });
 
   await prisma.growthJourney.upsert({
     where: { id: 'singleton' },
