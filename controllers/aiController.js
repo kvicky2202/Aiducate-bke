@@ -1,4 +1,14 @@
 import prisma from '../config/db.js';
+import { parseJson } from '../utils/json.js';
+import { loadMaterialSourceText } from '../utils/pdfText.js';
+import { assertStudentEnrolled } from '../utils/enrollment.js';
+import { chatCompletion, isAiEnabled } from '../services/aiService.js';
+import { generateAssignmentQuestions as buildAssignmentQuestions } from '../services/quizGeneratorService.js';
+
+const EDUCATOR_SYSTEM = `You are an AI teaching assistant for AIDucate. You help teachers understand class performance and suggest practical next steps.
+Be concise, data-driven, and supportive. Use ONLY the class data in the context — do not invent student names, scores, or assignments.
+When students have not submitted, say so clearly. Suggest actionable teaching moves (review sessions, grouping, assignment tweaks).
+Keep replies under 150 words unless the teacher asks for detail. You may use **bold** and short bullet lists.`;
 
 const MOCK_QUESTION_BANK = {
   English: [
@@ -69,33 +79,273 @@ export const generateQuizForSubject = async (req, res) => {
 
 export const getGeneratedQuiz = (id) => generatedQuizzes.get(id) || null;
 
-export const askEducatorAssistant = async (req, res) => {
-  try {
-    const { classId, message } = req.body;
-    const [classData, assignments] = await Promise.all([
-      prisma.classroom.findUnique({ where: { id: classId } }),
-      prisma.assignment.findMany({ where: { classId } }),
-    ]);
+async function loadClassInsightsData(classId) {
+  const classData = await prisma.classroom.findUnique({ where: { id: classId } });
+  if (!classData) return null;
 
-    if (!classData) return res.status(404).json({ message: 'Class not found.' });
+  const assignments = await prisma.assignment.findMany({ where: { classId } });
+  const assignmentIds = assignments.map((a) => a.id);
 
-    const scored = assignments.filter((a) => typeof a.score === 'number' && a.totalPoints);
-    const avgScore =
-      scored.length > 0
+  const results =
+    assignmentIds.length > 0
+      ? await prisma.assignmentResult.findMany({
+          where: { assignmentId: { in: assignmentIds } },
+        })
+      : [];
+
+  const allStudents = await prisma.user.findMany({ where: { role: 'student' } });
+  const students = allStudents.filter((u) =>
+    parseJson(u.enrolledClassIds, []).includes(classId)
+  );
+
+  return { classData, assignments, results, students };
+}
+
+function formatEducatorContext({ classData, assignments, results, students }) {
+  const enrolledCount = students.length;
+  const studentNames = students.map((s) => s.name).join(', ');
+
+  const assignmentLines = assignments.map((a) => {
+    const subs = results.filter((r) => r.assignmentId === a.id);
+    const avg =
+      subs.length > 0
         ? Math.round(
-            scored.reduce((sum, a) => sum + (a.score / a.totalPoints) * 100, 0) / scored.length
+            subs.reduce((sum, r) => sum + (r.score / r.totalPoints) * 100, 0) / subs.length
           )
         : null;
+    return `- ${a.title}: ${subs.length}/${enrolledCount} submitted, class avg ${avg ?? '—'}%, due ${a.dueDate}, status ${a.status}`;
+  });
+
+  const studentLines = students.map((s) => {
+    const subs = results.filter((r) => r.studentId === s.id);
+    if (!subs.length) return `- ${s.name}: no submissions yet`;
+    const avg = Math.round(
+      subs.reduce((sum, r) => sum + (r.score / r.totalPoints) * 100, 0) / subs.length
+    );
+    const detail = subs
+      .map((r) => {
+        const a = assignments.find((x) => x.id === r.assignmentId);
+        const pct = Math.round((r.score / r.totalPoints) * 100);
+        return `${a?.title ?? 'assignment'} ${pct}%`;
+      })
+      .join('; ');
+    return `- ${s.name}: avg ${avg}% (${detail})`;
+  });
+
+  const allPercents = results.map((r) => (r.score / r.totalPoints) * 100);
+  const classAvg =
+    allPercents.length > 0
+      ? Math.round(allPercents.reduce((a, b) => a + b, 0) / allPercents.length)
+      : null;
+
+  const notSubmitted = students.filter(
+    (s) => !results.some((r) => r.studentId === s.id)
+  );
+  const missingNames = notSubmitted.map((s) => s.name).join(', ');
+
+  return [
+    `Class: ${classData.name}`,
+    `Subject: ${classData.subject ?? 'N/A'}`,
+    `Section: ${classData.section ?? 'N/A'}`,
+    `Teacher: ${classData.teacherName}`,
+    `Enrolled students (${enrolledCount}): ${studentNames || 'none'}`,
+    classAvg !== null
+      ? `Overall average from submissions: ${classAvg}% (${results.length} total submissions)`
+      : 'No student submissions recorded yet',
+    missingNames ? `Students with zero submissions: ${missingNames}` : '',
+    'Assignments:',
+    assignmentLines.length ? assignmentLines.join('\n') : '- None',
+    'Per-student:',
+    studentLines.length ? studentLines.join('\n') : '- No submission data',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+export const askEducatorAssistant = async (req, res) => {
+  try {
+    const { classId, message, history } = req.body;
+    const trimmed = String(message || '').trim();
+    if (!trimmed) return res.status(400).json({ message: 'message is required.' });
+
+    const insights = await loadClassInsightsData(classId);
+    if (!insights) return res.status(404).json({ message: 'Class not found.' });
+
+    const { classData, assignments, results, students } = insights;
+    const contextBlock = formatEducatorContext(insights);
+
     const activeCount = assignments.filter((a) => a.status !== 'completed').length;
+    const allPercents = results.map((r) => (r.score / r.totalPoints) * 100);
+    const avgScore =
+      allPercents.length > 0
+        ? Math.round(allPercents.reduce((a, b) => a + b, 0) / allPercents.length)
+        : null;
+
+    const prior = Array.isArray(history) ? history.slice(-6) : [];
+    const messages = prior
+      .filter((m) => m?.text && (m.role === 'user' || m.role === 'ai' || m.sender === 'user' || m.sender === 'ai'))
+      .map((m) => ({
+        role: m.role === 'user' || m.sender === 'user' ? 'user' : 'assistant',
+        content: String(m.text).slice(0, 1500),
+      }));
+    messages.push({ role: 'user', content: trimmed });
+
+    let text;
+    let usedAi = false;
+
+    if (isAiEnabled()) {
+      try {
+        const result = await chatCompletion({
+          system: `${EDUCATOR_SYSTEM}\n\n--- Class data (live) ---\n${contextBlock}`,
+          messages,
+          maxTokens: 550,
+        });
+        if (result.text) {
+          text = result.text;
+          usedAi = true;
+        }
+      } catch (aiErr) {
+        console.error('askEducatorAssistant AI call failed:', aiErr.message);
+      }
+    }
+
+    if (!text) {
+      text = `Looking at ${classData.name}: ${
+        avgScore !== null ? `submission average is ${avgScore}%, ` : 'no submissions yet, '
+      }${students.length} enrolled, ${activeCount} active assignment${activeCount === 1 ? '' : 's'}. Regarding "${trimmed}" — enable OPENROUTER_API_KEY for full AI analysis.`;
+    }
 
     res.json({
       sender: 'ai',
-      text: `Looking at ${classData.name}: ${
-        avgScore !== null ? `class average is ${avgScore}%, ` : 'no graded assignments yet, '
-      }${activeCount} assignment${activeCount === 1 ? '' : 's'} still active. Regarding "${message}" — once connected to a real model, I'll give tailored guidance based on this class's actual performance data.`,
+      text,
+      usedAi,
     });
   } catch (error) {
     console.error('askEducatorAssistant', error);
     res.status(500).json({ message: 'Failed to get assistant reply.' });
+  }
+};
+
+/**
+ * Preview/generate MCQ questions for teacher assignment builder.
+ * Sources: class material (PDF + summary), subject, or custom topic.
+ */
+export const generateAssignmentQuestions = async (req, res) => {
+  try {
+    const { materialId, classId, subject, topic, questionCount } = req.body || {};
+
+    let sourceText = '';
+    let materialTitle = '';
+    let resolvedSubject = subject?.trim() || '';
+    let resolvedTopic = topic?.trim() || '';
+
+    if (materialId) {
+      const material = await prisma.classMaterial.findUnique({ where: { id: materialId } });
+      if (!material) return res.status(404).json({ message: 'Material not found.' });
+
+      if (classId && material.classId !== classId) {
+        return res.status(400).json({ message: 'Material does not belong to this class.' });
+      }
+
+      materialTitle = material.title;
+      sourceText = await loadMaterialSourceText(material);
+
+      if (!resolvedSubject) {
+        const cls = await prisma.classroom.findUnique({ where: { id: material.classId } });
+        resolvedSubject = cls?.subject || '';
+      }
+    }
+
+    if (classId && !resolvedSubject) {
+      const cls = await prisma.classroom.findUnique({ where: { id: classId } });
+      resolvedSubject = cls?.subject || '';
+    }
+
+    const result = await buildAssignmentQuestions({
+      sourceText,
+      subject: resolvedSubject,
+      topic: resolvedTopic,
+      materialTitle,
+      questionCount,
+    });
+
+    res.json({
+      questions: result.questions,
+      usedAi: result.usedAi,
+      source: result.source,
+      aiEnabled: isAiEnabled(),
+      materialTitle: materialTitle || undefined,
+      hasSourceText: Boolean(sourceText),
+    });
+  } catch (error) {
+    console.error('generateAssignmentQuestions', error);
+    res.status(500).json({ message: 'Failed to generate questions.' });
+  }
+};
+
+/**
+ * Student practice quiz from teacher-uploaded class materials (not graded / not saved as assignment).
+ */
+export const generatePracticeQuiz = async (req, res) => {
+  try {
+    const { classId, studentId, materialId, topic, questionCount } = req.body || {};
+
+    if (!classId || !studentId) {
+      return res.status(400).json({ message: 'classId and studentId are required.' });
+    }
+
+    const enrollment = await assertStudentEnrolled(studentId, classId);
+    if (!enrollment.ok) {
+      return res.status(enrollment.status).json({ message: enrollment.message });
+    }
+
+    const classroom = await prisma.classroom.findUnique({ where: { id: classId } });
+    if (!classroom) return res.status(404).json({ message: 'Class not found.' });
+
+    let sourceText = '';
+    let materialTitle = '';
+    const resolvedSubject = classroom.subject || '';
+    const resolvedTopic = topic?.trim() || '';
+
+    if (materialId) {
+      const material = await prisma.classMaterial.findUnique({ where: { id: materialId } });
+      if (!material) return res.status(404).json({ message: 'Material not found.' });
+      if (material.classId !== classId) {
+        return res.status(400).json({ message: 'Material does not belong to this class.' });
+      }
+      materialTitle = material.title;
+      sourceText = await loadMaterialSourceText(material);
+    }
+
+    const result = await buildAssignmentQuestions({
+      sourceText,
+      subject: resolvedSubject,
+      topic: resolvedTopic,
+      materialTitle,
+      questionCount,
+    });
+
+    let title = `Practice — ${resolvedSubject}`;
+    if (materialTitle) {
+      title = resolvedTopic
+        ? `Practice: ${materialTitle} (${resolvedTopic})`
+        : `Practice: ${materialTitle}`;
+    } else if (resolvedTopic) {
+      title = `Practice: ${resolvedTopic}`;
+    }
+
+    res.json({
+      title,
+      questions: result.questions,
+      usedAi: result.usedAi,
+      source: result.source,
+      classId,
+      materialId: materialId || undefined,
+      materialTitle: materialTitle || undefined,
+      topic: resolvedTopic || undefined,
+    });
+  } catch (error) {
+    console.error('generatePracticeQuiz', error);
+    res.status(500).json({ message: 'Failed to generate practice quiz.' });
   }
 };

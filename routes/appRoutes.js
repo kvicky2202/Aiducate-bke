@@ -13,11 +13,13 @@ import {
   leaveClass,
   listClassMaterials,
   createClassMaterial,
+  deleteClassMaterial,
 } from '../controllers/classesController.js';
 import {
   listAssignments,
   getAssignmentById,
   patchAssignment,
+  postAssignment,
   listAssignmentQuizzes,
   postAssignmentResult,
   listAssignmentResults,
@@ -44,7 +46,8 @@ import {
   getWardrobeItems,
   getAiVoices,
 } from '../controllers/catalogController.js';
-import { generateQuizForSubject, askEducatorAssistant } from '../controllers/aiController.js';
+import { generateQuizForSubject, askEducatorAssistant, generateAssignmentQuestions, generatePracticeQuiz } from '../controllers/aiController.js';
+import { askCodeLabMentor, getAiStatus } from '../controllers/mentorController.js';
 import { uploadMaterialPdf } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
@@ -67,8 +70,10 @@ router.post('/classMaterials', (req, res, next) => {
     return createClassMaterial(req, res, next);
   });
 });
+router.delete('/classMaterials/:id', deleteClassMaterial);
 
 router.get('/assignments', listAssignments);
+router.post('/assignments', postAssignment);
 router.get('/assignments/:id', getAssignmentById);
 router.patch('/assignments/:id', patchAssignment);
 router.get('/assignmentQuizzes', listAssignmentQuizzes);
@@ -94,6 +99,10 @@ router.get('/wardrobeItems', getWardrobeItems);
 router.get('/aiVoices', getAiVoices);
 
 router.post('/generateQuiz', generateQuizForSubject);
+router.post('/generateQuestions', generateAssignmentQuestions);
+router.post('/practiceQuiz', generatePracticeQuiz);
 router.post('/askEducatorAssistant', askEducatorAssistant);
+router.post('/codeLabMentor', askCodeLabMentor);
+router.get('/ai/status', getAiStatus);
 
 export default router;

@@ -89,36 +89,17 @@ async function main() {
     });
   }
 
-  const materials = [
-    {
-      id: 'mat-101',
-      classId: 'cls-101',
-      title: 'Unit 2: Linear Equations & Algebra Notes.pdf',
-      uploadedAt: '2026-08-20',
-      summary: 'Covers basic single-variable equation solving and algebraic simplification rules.',
-    },
-    {
-      id: 'mat-102',
-      classId: 'cls-102',
-      title: 'Chapter 4: Photosynthesis & Plant Cells.pdf',
-      uploadedAt: '2026-08-21',
-      summary: 'Covers chloroplast structures, light reactions, and carbon dioxide absorption.',
-    },
-  ];
-
-  for (const row of materials) {
-    await prisma.classMaterial.upsert({
-      where: { id: row.id },
-      update: {},
-      create: row,
-    });
+  // Teachers upload their own materials; clear on re-seed (no demo PDFs in seed)
+  await prisma.assignment.updateMany({ data: { materialId: null } });
+  const removedMaterials = await prisma.classMaterial.deleteMany();
+  if (removedMaterials.count > 0) {
+    console.log(`Removed ${removedMaterials.count} class material(s).`);
   }
 
   const assignments = [
     {
       id: 'asgn-1',
       classId: 'cls-101',
-      materialId: 'mat-101',
       title: 'Algebraic Expressions Practice',
       dueDate: '2026-08-28',
       totalPoints: 100,
@@ -129,7 +110,6 @@ async function main() {
     {
       id: 'asgn-2',
       classId: 'cls-102',
-      materialId: 'mat-102',
       title: 'Photosynthesis Quiz Prep',
       dueDate: '2026-08-30',
       totalPoints: 50,

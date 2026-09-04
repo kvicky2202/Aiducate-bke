@@ -1,5 +1,7 @@
 import prisma from '../config/db.js';
+import fs from 'fs';
 import { parseJson, toJson } from '../utils/json.js';
+import { assertStudentEnrolled } from '../utils/enrollment.js';
 import { shapeUser, shapeClassMaterial } from '../utils/serializers.js';
 
 const BANNER_COLORS = [
@@ -201,8 +203,18 @@ export const leaveClass = async (req, res) => {
 
 export const listClassMaterials = async (req, res) => {
   try {
+    const classId = req.query.classId ? String(req.query.classId) : null;
+    const studentId = req.query.studentId ? String(req.query.studentId) : null;
+
+    if (studentId && classId) {
+      const enrollment = await assertStudentEnrolled(studentId, classId);
+      if (!enrollment.ok) {
+        return res.status(enrollment.status).json({ message: enrollment.message });
+      }
+    }
+
     const where = {};
-    if (req.query.classId) where.classId = String(req.query.classId);
+    if (classId) where.classId = classId;
     const materials = await prisma.classMaterial.findMany({ where });
     res.json(materials.map(shapeClassMaterial));
   } catch (error) {
@@ -256,5 +268,51 @@ export const createClassMaterial = async (req, res) => {
   } catch (error) {
     console.error('createClassMaterial', error);
     res.status(500).json({ message: error.message || 'Failed to upload material.' });
+  }
+};
+
+/** Teacher deletes a class material and its PDF file from disk. */
+export const deleteClassMaterial = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const teacherId = req.body?.teacherId || req.query?.teacherId;
+
+    const material = await prisma.classMaterial.findUnique({ where: { id } });
+    if (!material) return res.status(404).json({ message: 'Material not found.' });
+
+    const classroom = await prisma.classroom.findUnique({ where: { id: material.classId } });
+    if (!classroom) return res.status(404).json({ message: 'Class not found.' });
+
+    if (teacherId) {
+      const teacher = await prisma.user.findUnique({ where: { id: teacherId } });
+      if (!teacher) return res.status(404).json({ message: 'Teacher not found.' });
+      if (teacher.role !== 'teacher') {
+        return res.status(403).json({ message: 'Only teachers can delete materials.' });
+      }
+      if (classroom.teacherId !== teacher.id) {
+        return res.status(403).json({ message: 'You can only delete materials from your own classes.' });
+      }
+    }
+
+    if (material.filePath && fs.existsSync(material.filePath)) {
+      try {
+        fs.unlinkSync(material.filePath);
+      } catch (unlinkErr) {
+        console.error('deleteClassMaterial unlink failed:', unlinkErr.message);
+      }
+    }
+
+    await prisma.$transaction([
+      prisma.assignment.updateMany({
+        where: { materialId: id },
+        data: { materialId: null },
+      }),
+      prisma.classMaterial.delete({ where: { id } }),
+    ]);
+
+    res.json({ deleted: true, id });
+  } catch (error) {
+    console.error('deleteClassMaterial', error);
+    res.status(500).json({ message: 'Failed to delete material.' });
   }
 };

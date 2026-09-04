@@ -4,6 +4,7 @@ import {
   shapeAssignmentQuiz,
   shapeAssignmentResult,
 } from '../utils/serializers.js';
+import { normalizeAssignmentQuestions } from '../services/quizGeneratorService.js';
 
 export const listAssignments = async (req, res) => {
   try {
@@ -45,6 +46,66 @@ export const patchAssignment = async (req, res) => {
   } catch (error) {
     console.error('patchAssignment', error);
     res.status(500).json({ message: 'Failed to update assignment.' });
+  }
+};
+
+/** Teacher creates an assignment with attached MCQ quiz questions. */
+export const postAssignment = async (req, res) => {
+  try {
+    const { classId, title, dueDate, materialId, questions, totalPoints, status } = req.body || {};
+
+    if (!classId || !title?.trim()) {
+      return res.status(400).json({ message: 'classId and title are required.' });
+    }
+
+    const normalized = normalizeAssignmentQuestions(questions);
+    if (!normalized.length) {
+      return res.status(400).json({ message: 'At least one valid question is required.' });
+    }
+
+    const classroom = await prisma.classroom.findUnique({ where: { id: classId } });
+    if (!classroom) return res.status(404).json({ message: 'Class not found.' });
+
+    if (materialId) {
+      const material = await prisma.classMaterial.findUnique({ where: { id: materialId } });
+      if (!material) return res.status(404).json({ message: 'Material not found.' });
+      if (material.classId !== classId) {
+        return res.status(400).json({ message: 'Material does not belong to this class.' });
+      }
+    }
+
+    const assignmentId = `asgn-${Date.now()}`;
+    const quizId = `qset-${Date.now()}`;
+    const points = totalPoints ?? normalized.length * 10;
+
+    const assignment = await prisma.assignment.create({
+      data: {
+        id: assignmentId,
+        classId,
+        materialId: materialId || null,
+        title: title.trim(),
+        dueDate: dueDate?.trim() || 'No deadline',
+        totalPoints: Number(points),
+        status: status || 'active',
+        submissionCount: 0,
+      },
+    });
+
+    const quizRow = await prisma.assignmentQuiz.create({
+      data: {
+        id: quizId,
+        assignmentId: assignmentId,
+        questions: toJson(normalized),
+      },
+    });
+
+    res.status(201).json({
+      assignment,
+      quiz: shapeAssignmentQuiz(quizRow),
+    });
+  } catch (error) {
+    console.error('postAssignment', error);
+    res.status(500).json({ message: 'Failed to create assignment.' });
   }
 };
 

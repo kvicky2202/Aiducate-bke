@@ -336,6 +336,33 @@ export const openApiSpec = {
         },
       },
     },
+    '/classMaterials/{id}': {
+      delete: {
+        tags: ['Materials'],
+        summary: 'Teacher deletes a class material and its PDF file',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            example: 'mat-101',
+          },
+          {
+            name: 'teacherId',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Teacher user id (ownership check)',
+            example: 'usr-teacher-1',
+          },
+        ],
+        responses: {
+          200: { description: 'Material deleted' },
+          403: { description: 'Not the class teacher' },
+          404: { description: 'Not found' },
+        },
+      },
+    },
 
     // ---- Assignments ----
     '/assignments': {
@@ -346,6 +373,42 @@ export const openApiSpec = {
           { name: 'classId', in: 'query', schema: { type: 'string' }, example: 'cls-101' },
         ],
         responses: { 200: { description: 'Array of assignments' } },
+      },
+      post: {
+        tags: ['Assignments'],
+        summary: 'Create assignment with MCQ quiz questions',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['classId', 'title', 'questions'],
+                properties: {
+                  classId: { type: 'string', example: 'cls-101' },
+                  title: { type: 'string', example: 'Algebra Quiz' },
+                  dueDate: { type: 'string', example: '2026-09-15' },
+                  materialId: { type: 'string', example: 'mat-101' },
+                  totalPoints: { type: 'integer', example: 50 },
+                  status: { type: 'string', example: 'active' },
+                  questions: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        prompt: { type: 'string' },
+                        options: { type: 'array', items: { type: 'string' } },
+                        correctAnswer: { type: 'integer', description: '0-based index' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: { 201: { description: 'Assignment and quiz created' } },
       },
     },
     '/assignments/{id}': {
@@ -642,7 +705,7 @@ export const openApiSpec = {
       },
     },
     '/codeModules/{moduleId}': {
-      get: {
+      get: {]
         tags: ['Catalog'],
         summary: 'Full module curriculum (Python = official PSF-aligned content)',
         parameters: [
@@ -702,10 +765,75 @@ export const openApiSpec = {
         responses: { 200: { description: 'Generated quiz metadata' } },
       },
     },
+    '/generateQuestions': {
+      post: {
+        tags: ['AI'],
+        summary: 'Generate MCQ questions for teacher assignment builder (material PDF/summary or topic)',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  materialId: { type: 'string', example: 'mat-101' },
+                  classId: { type: 'string', example: 'cls-101' },
+                  subject: { type: 'string', example: 'Math' },
+                  topic: { type: 'string', example: 'Linear equations' },
+                  questionCount: { type: 'integer', example: 5 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Generated questions for preview/edit before publish',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    questions: { type: 'array' },
+                    usedAi: { type: 'boolean' },
+                    source: { type: 'string', enum: ['ai', 'template'] },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/practiceQuiz': {
+      post: {
+        tags: ['AI'],
+        summary: 'Student practice quiz from class materials (not graded)',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['classId', 'studentId'],
+                properties: {
+                  classId: { type: 'string', example: 'cls-101' },
+                  studentId: { type: 'string', example: 'usr-student-1' },
+                  materialId: { type: 'string', example: 'mat-101' },
+                  topic: { type: 'string', example: 'Linear equations' },
+                  questionCount: { type: 'integer', example: 5 },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Practice quiz questions' } },
+      },
+    },
     '/askEducatorAssistant': {
       post: {
         tags: ['AI'],
-        summary: 'Ask educator assistant about a class (mock AI)',
+        summary: 'Ask educator assistant about a class (live submission data + OpenRouter/OpenAI)',
         requestBody: {
           required: true,
           content: {
@@ -716,12 +844,88 @@ export const openApiSpec = {
                 properties: {
                   classId: { type: 'string', example: 'cls-101' },
                   message: { type: 'string', example: 'How is the class doing?' },
+                  history: {
+                    type: 'array',
+                    description: 'Recent chat messages for multi-turn context',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        sender: { type: 'string', enum: ['user', 'ai'] },
+                        text: { type: 'string' },
+                      },
+                    },
+                  },
                 },
               },
             },
           },
         },
-        responses: { 200: { description: 'AI reply' } },
+        responses: {
+          200: {
+            description: 'AI reply',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    sender: { type: 'string', example: 'ai' },
+                    text: { type: 'string' },
+                    usedAi: { type: 'boolean' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/codeLabMentor': {
+      post: {
+        tags: ['AI'],
+        summary: 'Baobab Code Lab mentor (OpenRouter or OpenAI when API key is set)',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['message'],
+                properties: {
+                  message: { type: 'string' },
+                  context: {
+                    type: 'object',
+                    properties: {
+                      moduleId: { type: 'string' },
+                      moduleTitle: { type: 'string' },
+                      lessonId: { type: 'string' },
+                      lessonTitle: { type: 'string' },
+                      codeSnippet: { type: 'string' },
+                      source: { type: 'string', enum: ['hub', 'lesson', 'syllabus', 'hint'] },
+                    },
+                  },
+                  history: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        role: { type: 'string' },
+                        text: { type: 'string' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Mentor reply with usedAi flag' } },
+      },
+    },
+    '/ai/status': {
+      get: {
+        tags: ['AI'],
+        summary: 'Whether live AI is configured on the server',
+        responses: { 200: { description: 'enabled + model' } },
       },
     },
   },
