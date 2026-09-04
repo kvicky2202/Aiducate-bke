@@ -705,7 +705,7 @@ export const openApiSpec = {
       },
     },
     '/codeModules/{moduleId}': {
-      get: {]
+      get: {
         tags: ['Catalog'],
         summary: 'Full module curriculum (Python = official PSF-aligned content)',
         parameters: [
