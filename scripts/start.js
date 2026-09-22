@@ -27,6 +27,5 @@ if (userCount === 0) {
 } else {
   console.log(`Database already has ${userCount} user(s); skipping seed.`);
 }
-await prisma.$disconnect();
 
 await import('../index.js');

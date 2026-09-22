@@ -95,8 +95,7 @@ export const register = async (req, res) => {
         passwordHash,
         name: fullName,
         role: formattedRole,
-        initials: formattedRole === 'teacher' ? initials : undefined,
-        teacherCardId: formattedRole === 'teacher' ? teacherCardId : null,
+        ...(formattedRole === 'teacher' ? { initials, teacherCardId } : {}),
       },
     });
 
@@ -106,7 +105,11 @@ export const register = async (req, res) => {
     res.status(201).json(authPayload(user, token));
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ success: false, message: 'Server error during registration.' });
+    res.status(500).json({
+      success: false,
+      message: 'Server error during registration.',
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 };
 

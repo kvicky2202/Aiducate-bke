@@ -10,6 +10,7 @@ import appRoutes from './routes/appRoutes.js';
 import { openApiSpec } from './docs/openapi.js';
 import { uploadsRoot } from './middleware/uploadMiddleware.js';
 import { getAiProviderInfo } from './services/aiService.js';
+import prisma from './config/db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -55,8 +56,21 @@ app.get('/', (_req, res) => {
 </html>`);
 });
 
-app.get('/health', (_req, res) => {
-  res.json({ message: 'AIDucate API is running smoothly!' });
+app.get('/health', async (_req, res) => {
+  try {
+    const users = await prisma.user.count();
+    res.json({
+      message: 'AIDucate API is running smoothly!',
+      database: 'ok',
+      users,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'API is up, but the database is not responding.',
+      database: 'error',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 });
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, { explorer: true }));
