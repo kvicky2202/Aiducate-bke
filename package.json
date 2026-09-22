@@ -4,16 +4,16 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "postinstall": "node scripts/ensure-prisma-client.js",
+    "postinstall": "node scripts/ensure-prisma-client.js && npm rebuild better-sqlite3 --build-from-source",
     "dev": "nodemon index.js",
-    "build": "node scripts/ensure-prisma-client.js",
+    "build": "node scripts/ensure-prisma-client.js && npm rebuild better-sqlite3 --build-from-source",
     "start": "node scripts/start.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed"
   },
   "engines": {
-    "node": ">=20"
+    "node": "20.x"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
