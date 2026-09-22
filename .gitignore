@@ -4,3 +4,7 @@ node_modules
 
 /uploads
 !/uploads/.gitkeep
+
+# Keep the generated Prisma client in git so hosts can boot
+!/generated/
+!/generated/prisma/
