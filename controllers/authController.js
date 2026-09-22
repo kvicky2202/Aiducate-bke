@@ -3,6 +3,16 @@ import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
 import { shapeUser } from '../utils/serializers.js';
 
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
+export const cookieNameForRole = (role) =>
+  role === 'teacher' ? 'token_teacher' : 'token_student';
+
 const generateToken = (user) => {
   return jwt.sign(
     { id: user.id, username: user.username, role: user.role },
@@ -11,14 +21,15 @@ const generateToken = (user) => {
   );
 };
 
-const setTokenCookie = (res, token) => {
-  res.cookie('token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+const setTokenCookie = (res, token, role) => {
+  res.cookie(cookieNameForRole(role), token, COOKIE_OPTIONS);
 };
+
+const authPayload = (user, token) => ({
+  success: true,
+  token,
+  user: shapeUser(user),
+});
 
 export const register = async (req, res) => {
   const body = req.body || {};
@@ -90,12 +101,9 @@ export const register = async (req, res) => {
     });
 
     const token = generateToken(user);
-    setTokenCookie(res, token);
+    setTokenCookie(res, token, formattedRole);
 
-    res.status(201).json({
-      success: true,
-      user: shapeUser(user),
-    });
+    res.status(201).json(authPayload(user, token));
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ success: false, message: 'Server error during registration.' });
@@ -103,7 +111,7 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { username, password } = req.body || {};
+  const { username, password, role } = req.body || {};
 
   try {
     if (!username || !password) {
@@ -120,13 +128,24 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     }
 
-    const token = generateToken(user);
-    setTokenCookie(res, token);
+    const expectedRole = role ? String(role).toLowerCase() : null;
+    if (expectedRole && !['student', 'teacher'].includes(expectedRole)) {
+      return res.status(400).json({ success: false, message: 'Role must be student or teacher.' });
+    }
+    if (expectedRole && user.role !== expectedRole) {
+      return res.status(403).json({
+        success: false,
+        message:
+          expectedRole === 'teacher'
+            ? 'This account is not a teacher. Use the Student Portal instead.'
+            : 'This account is not a student. Use the Educator Portal instead.',
+      });
+    }
 
-    res.json({
-      success: true,
-      user: shapeUser(user),
-    });
+    const token = generateToken(user);
+    setTokenCookie(res, token, user.role);
+
+    res.json(authPayload(user, token));
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ success: false, message: 'Server error during login.' });
@@ -134,7 +153,14 @@ export const login = async (req, res) => {
 };
 
 export const logout = (req, res) => {
-  res.clearCookie('token');
+  const role = String(req.body?.role || req.query?.role || '').toLowerCase();
+  if (role === 'student' || role === 'teacher') {
+    res.clearCookie(cookieNameForRole(role));
+  } else {
+    res.clearCookie('token_student');
+    res.clearCookie('token_teacher');
+    res.clearCookie('token');
+  }
   res.json({ success: true, message: 'Logged out.' });
 };
 
