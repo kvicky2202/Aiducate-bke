@@ -40,15 +40,30 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use('/uploads', express.static(uploadsRoot));
 
+app.get('/', (_req, res) => {
+  res.type('html').send(`<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>AIDucate API</title></head>
+  <body style="font-family: sans-serif; max-width: 40rem; margin: 3rem auto; line-height: 1.5;">
+    <h1>AIDucate API is running</h1>
+    <p>This URL is the backend, not the student/teacher website.</p>
+    <ul>
+      <li><a href="/health">/health</a> — status check</li>
+      <li><a href="/api-docs">/api-docs</a> — API docs</li>
+    </ul>
+  </body>
+</html>`);
+});
+
+app.get('/health', (_req, res) => {
+  res.json({ message: 'AIDucate API is running smoothly!' });
+});
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, { explorer: true }));
 app.get('/openapi.json', (_req, res) => res.json(openApiSpec));
 
 app.use('/api', authRoutes);
 app.use('/', appRoutes);
-
-app.get('/health', (_req, res) => {
-  res.json({ message: 'AIDucate API is running smoothly!' });
-});
 
 app.listen(Number(PORT), (err) => {
   if (err) {
