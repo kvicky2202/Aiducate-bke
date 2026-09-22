@@ -1,15 +1,10 @@
-import pkg from '@prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import bcrypt from 'bcryptjs';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import prisma from '../config/db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const { PrismaClient } = pkg;
-const adapter = new PrismaBetterSqlite3({ url: 'file:./prisma/dev.db' });
-const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('Starting database seeding...');

@@ -106,11 +106,11 @@ model QuizQuestionSet {
 }
 
 model Story {
-  id           String @id
-  title        String
-  difficulty   String
-  starsReward  Int
-  content      String
+  id          String @id
+  title       String
+  difficulty  String
+  starsReward Int
+  content     String
 }
 
 model WardrobeItem {
