@@ -4,9 +4,10 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "postinstall": "node scripts/ensure-prisma-client.js && npm rebuild better-sqlite3 --build-from-source",
+    "postinstall": "node scripts/ensure-prisma-client.js",
+    "rebuild-sqlite": "node scripts/rebuild-sqlite.js",
     "dev": "nodemon index.js",
-    "build": "node scripts/ensure-prisma-client.js && npm rebuild better-sqlite3 --build-from-source",
+    "build": "node scripts/ensure-prisma-client.js && node scripts/rebuild-sqlite.js",
     "start": "node scripts/start.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

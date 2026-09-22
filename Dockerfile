@@ -7,10 +7,13 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+ENV npm_config_build_from_source=true
+RUN npm ci --ignore-scripts
 
 COPY . .
-RUN npx prisma generate
+RUN npx prisma generate \
+  && node scripts/ensure-prisma-client.js \
+  && node scripts/rebuild-sqlite.js
 
 ENV NODE_ENV=production
 EXPOSE 10000
