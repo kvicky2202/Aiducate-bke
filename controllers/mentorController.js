@@ -86,21 +86,22 @@ export const askCodeLabMentor = async (req, res) => {
 
     let text;
     let usedAi = false;
+    let aiError;
 
     if (isAiEnabled()) {
-      try {
-        const result = await chatCompletion({ system, messages });
-        if (result.text) {
-          text = result.text;
-          usedAi = true;
-        }
-      } catch (aiErr) {
-        console.error('askCodeLabMentor AI call failed:', aiErr.message);
+      const result = await chatCompletion({ system, messages });
+      if (result.text) {
+        text = result.text;
+        usedAi = true;
+      } else {
+        aiError = result.error;
       }
     }
 
     if (!text) {
-      text = mockMentorReply(trimmed, ctx);
+      text = isAiEnabled()
+        ? `I couldn't reach the mentor model just now${aiError ? ` (${aiError})` : ''}. Try asking again in a moment.`
+        : mockMentorReply(trimmed, ctx);
     }
 
     res.json({

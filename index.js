@@ -63,6 +63,7 @@ app.get('/health', async (_req, res) => {
       message: 'AIDucate API is running smoothly!',
       database: 'ok',
       users,
+      ai: getAiProviderInfo(),
     });
   } catch (error) {
     res.status(500).json({

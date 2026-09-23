@@ -192,27 +192,28 @@ export const askEducatorAssistant = async (req, res) => {
 
     let text;
     let usedAi = false;
+    let aiError;
 
     if (isAiEnabled()) {
-      try {
-        const result = await chatCompletion({
-          system: `${EDUCATOR_SYSTEM}\n\n--- Class data (live) ---\n${contextBlock}`,
-          messages,
-          maxTokens: 550,
-        });
-        if (result.text) {
-          text = result.text;
-          usedAi = true;
-        }
-      } catch (aiErr) {
-        console.error('askEducatorAssistant AI call failed:', aiErr.message);
+      const result = await chatCompletion({
+        system: `${EDUCATOR_SYSTEM}\n\n--- Class data (live) ---\n${contextBlock}`,
+        messages,
+        maxTokens: 550,
+      });
+      if (result.text) {
+        text = result.text;
+        usedAi = true;
+      } else {
+        aiError = result.error;
       }
     }
 
     if (!text) {
-      text = `Looking at ${classData.name}: ${
-        avgScore !== null ? `submission average is ${avgScore}%, ` : 'no submissions yet, '
-      }${students.length} enrolled, ${activeCount} active assignment${activeCount === 1 ? '' : 's'}. Regarding "${trimmed}" — enable OPENROUTER_API_KEY for full AI analysis.`;
+      text = isAiEnabled()
+        ? `I couldn't reach the teaching assistant just now${aiError ? ` (${aiError})` : ''}. Try again in a moment.`
+        : `Looking at ${classData.name}: ${
+            avgScore !== null ? `submission average is ${avgScore}%, ` : 'no submissions yet, '
+          }${students.length} enrolled, ${activeCount} active assignment${activeCount === 1 ? '' : 's'}. Regarding "${trimmed}" — enable OPENROUTER_API_KEY for full AI analysis.`;
     }
 
     res.json({
